@@ -136,7 +136,7 @@ flowchart TD
     B --> C["Input Type Identification"]
 
     C --> D["Document Processing"]
-    D --> E["Qwen AI<br/>Invoice Extraction"]
+    D --> E["Gemma / Qwen AI<br/>Invoice Extraction"]
 
     E --> F["Data Parsing & Validation"]
 
