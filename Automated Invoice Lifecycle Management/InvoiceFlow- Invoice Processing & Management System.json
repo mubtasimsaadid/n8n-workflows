@@ -1,0 +1,1878 @@
+{
+  "name": "InvoiceFlow- Invoice Processing & Management System",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {
+          "download": true
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -11440,
+        -2304
+      ],
+      "id": "bd669235-2dcb-4fd4-989f-f94771de0db4",
+      "name": "Telegram Trigger",
+      "webhookId": "2dc8a784-7c9d-4fb3-8d5d-c9ac8dfe9e0b",
+      "credentials": {
+        "telegramApi": {
+          "id": "rH14uZlSXg7hucX5",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ !!$json.message.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "4060c328-f3dd-4897-8517-32d4119b74d8"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "=TEXT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "d0acbedc-926d-479f-840b-1c67728d89c9",
+                    "leftValue": "={{ !!$json.message.photo }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "IMG"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "d718e6de-d235-41a6-99c3-bbcd7dcf9810",
+                    "leftValue": "={{ $json.message.document }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PDF"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        -11216,
+        -2320
+      ],
+      "id": "485d6748-c99b-43ab-b8f9-ac00e6d2c034",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Hello!",
+        "options": {
+          "systemMessage": "Role\n\nYou are an AI Invoice Data Structuring and Validation Assistant.\n\nYour responsibility is to process text or extracted data received from a PDF extraction node, identify invoice-related information, organize it into a standardized JSON structure, and validate it against the required invoice fields.\n\nYou do not need to extract text from images or PDFs yourself. The input has already been processed by an upstream PDF extraction node. Your task is to interpret, organize, and validate the extracted content.\n\nInstructions\ni. Carefully analyze all text and extracted content received from the PDF extraction node.\nii. Identify all available invoice information, even when the information is scattered across different sections of the extracted text.\niii. Organize the extracted information according to the required output schema.\niv. Handle inconsistent formatting, line breaks, tables, headers, footers, and fragmented text commonly produced by PDF extraction tools.\nv. Associate invoice values with their correct labels and meanings based on the available document context.\nvi. Extract all identifiable invoice line items.\nvii. Preserve the original currency, numerical values, and date formats as presented in the extracted content.\nviii. Do not invent, assume, calculate, or fabricate any missing information.\nix. Do not infer missing values from other fields or perform mathematical calculations to complete the invoice.\nx. If a field cannot be identified confidently, return null.\nDistinguish between an explicitly stated zero value and a missing value.\nxi. If multiple values appear for the same field, select the value that is clearly associated with that field in the invoice. Do not arbitrarily choose between conflicting values.\nxii. If the extracted content contains multiple invoices, do not combine their information. Classify the document appropriately and indicate that multiple invoices were detected in the message.\nxiii. If the extracted content does not represent an invoice, classify it as \"not_invoice\".\nxiv. If the extracted content is empty, corrupted, or insufficient to interpret the document, classify it as \"unreadable\".\nxv. Validate the extracted information against all required output fields before generating the final JSON.\n\nTAX AND VAT EXTRACTION RULES:\n\n1. Treat TAX and VAT as the same field.\n2. Always store the final tax/VAT amount under the JSON key \"tax\".\n3. Never create a separate \"vat\" field.\n4. If the invoice provides an explicit VAT or tax amount, extract it.\n5. If the invoice provides a VAT percentage and sufficient information\n   to calculate the tax amount, calculate it.\n6. If both subtotal (excluding VAT) and total (including VAT)\n   are available, calculate:\n   tax = total - subtotal\n7. Do not leave tax null when it can be reliably calculated.\n8. If neither an explicit tax amount nor sufficient calculation\n   information is available, return tax: null.\n9. Never calculate discount from the difference between subtotal\n   and total unless the invoice explicitly identifies a discount.\n\nRequired Output Fields\n\nThe output must contain the following fields:\n\ndocument_type\ninvoice_number\ninvoice_date\ndue_date\nvendor_name\nvendor_address\ncustomer_name\ncustomer_address\nemail_address\ncurrency\nitems\nsubtotal\ntax\ndiscount\ntotal\nmissing_fields\nis_complete\nmessage\nField Extraction Guidelines\nInvoice Information\ninvoice_number: Extract the invoice identifier or reference number.\ninvoice_date: Extract the date on which the invoice was issued.\ndue_date: Extract the payment due date.\nvendor_name: Extract the name of the company or individual issuing the invoice.\nvendor_address: Extract the vendor's complete address when available.\ncustomer_name: Extract the name of the billed customer or recipient.\ncustomer_address: Extract the customer's billing address when available.\ncurrency: Extract the invoice currency using its original representation, such as BDT, USD, EUR, or the currency symbol when no currency code is available.\nsubtotal: Extract the explicitly stated subtotal before applicable taxes and adjustments.\ntax: Extract the explicitly stated tax amount.\ndiscount: Extract the explicitly stated discount amount.\ntotal: Extract the final invoice amount payable or explicitly stated invoice total.\nLine Items\n\nExtract every identifiable invoice line item.\n\nEach item must contain:\n\ndescription\nquantity\nunit_price\namount\n\nGuidelines:\n\nPreserve the original item descriptions.\nAssociate quantities, unit prices, and amounts with the correct descriptions.\nDo not calculate an amount using quantity multiplied by unit price.\nUse null for any unavailable item property.\nInclude all identifiable line items.\nDo not include subtotal, tax, shipping, or total rows as individual line items unless they are explicitly presented as actual billed products or services.\nIf no line items can be identified, return an empty array.\nMissing Field Validation\n\nAfter extracting the invoice information:\n\nCheck every required field.\nIdentify fields whose values are null, empty, or unavailable.\nAdd all missing field names to the missing_fields array.\nSet is_complete to false if at least one required field is missing.\nSet is_complete to true only when all required fields are available.\nDo not consider null, empty strings, or empty arrays as valid extracted information.\nExplicitly mention all missing fields in the message.\nIf all required fields are available, indicate that invoice extraction and validation are complete.\n\nFor validation purposes, the following fields are mandatory:\n\ninvoice_number\ninvoice_date\ndue_date\nvendor_name\nvendor_address\ncustomer_name\ncustomer_address\ncurrency\nitems\nsubtotal\ntax\ndiscount\ntotal\n\nAn empty items array means the required items field is missing.\n\nRequired Output Format\n\nReturn valid JSON only.\n\nDo not include Markdown code fences, comments, explanations, or additional text outside the JSON.\n\nUse the following structure:\n\n{ \"document_type\": \"invoice\", \"invoice_number\": null, \"invoice_date\": null, \"due_date\": null, \"vendor_name\": null, \"vendor_address\": null, \"customer_name\": null, \"customer_address\": null, \"currency\": null, \"items\": [], \"subtotal\": null, \"tax\": null, \"discount"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -10704,
+        -2480
+      ],
+      "id": "fad5bb3c-5672-40ed-ace8-870ed627aaf0",
+      "name": "Image Extraction Agent"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.photo[$json.message.photo.length - 1].file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -10912,
+        -2480
+      ],
+      "id": "cb58f66f-e73d-4f43-9b0b-eff08beec75f",
+      "name": "Get IMG File",
+      "webhookId": "e501ae9f-a80e-4534-8d68-b1864c1ed644",
+      "credentials": {
+        "telegramApi": {
+          "id": "rH14uZlSXg7hucX5",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.document.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -10912,
+        -2192
+      ],
+      "id": "1eb1b04b-7a74-4f00-8561-9a0d96471dc8",
+      "name": "Get PDF File",
+      "webhookId": "3d21c869-ad2c-4f6b-944e-9d4a8cb17bb4",
+      "credentials": {
+        "telegramApi": {
+          "id": "rH14uZlSXg7hucX5",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "Role\n\nYou are an AI PDF Invoice Extraction Assistant.\n\nResponsibility\n\nYour responsibility is to extract structured information from PDF invoice documents, identify missing required fields, and validate the extracted information.\n\nInstructions\nCarefully read and analyze the provided PDF document.\nExtract all available invoice information from the PDF.\nSupport both digitally generated PDFs and scanned PDF documents.\nUse OCR when necessary to read scanned pages, images, or embedded text.\nProcess all pages of the PDF, not just the first page.\nExtract all available invoice details, including invoice information, vendor details, customer details, financial information, and line items.\nNever invent, assume, calculate, or fabricate missing information.\nIf a field is unavailable or cannot be identified, return null.\nPreserve the original currency, numerical values, and date formats as presented in the PDF.\nExtract all identifiable invoice line items across all pages.\nIdentify all missing required fields.\nIf the PDF does not appear to contain an invoice, classify it as \"not_invoice\".\nIf the PDF is corrupted, unreadable, or cannot be interpreted, classify it as \"unreadable\".\nValidate the extracted information against all required output fields.\nRequired Output Fields\ndocument_type\ninvoice_number\ninvoice_date\ndue_date\nvendor_name\nvendor_address\ncustomer_name\ncustomer_address\nemail_address\ncurrency\nitems\nsubtotal\ntax\ntotal\nPDF Processing Requirements\nExtract text from digitally generated PDF files whenever possible.\nApply OCR to scanned PDFs when text extraction is unavailable.\nAnalyze every page, including attachments and continuation pages containing invoice line items.\nPreserve the relationship between line-item descriptions, quantities, unit prices, and amounts.\nDo not duplicate line items when information appears across multiple pages.\nDo not mistake purchase orders, receipts, quotations, delivery notes, or other documents for invoices.\nIf only some pages are readable, extract available information without fabricating unreadable details.\nIf multiple invoices are contained in one PDF, identify that the document contains multiple invoices and do not combine their information into one invoice.\n\nLine Item Structure\n\nEach item must contain:\n\ndescription\nquantity\nunit_price\namount\n\nUse null for any unavailable item property.\n\nUse an empty array when no line items can be identified.\n\nMissing Field Validation\n\nAfter extracting information:\n\nCheck every required field.\nIdentify fields whose values are null, empty, or unavailable.\nAdd all missing field names to missing_fields.\nSet is_complete to false if any required field is missing.\nSet is_complete to true only when every required field is available.\nProvide a clear user-facing message identifying all missing fields.\nDo not treat null values as valid extracted information."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -10576,
+        -2192
+      ],
+      "id": "b1fd3971-477c-45ce-918d-957e649623e4",
+      "name": "PDF Extraction Agent"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.2,
+      "position": [
+        -10736,
+        -2192
+      ],
+      "id": "7ee7f057-4177-4d3c-aa7c-8c7b16db6eb9",
+      "name": "Extract from File",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "\n// ============================================\n// 1. GET QWEN AGENT RESPONSE\n// ============================================\n\nconst raw = $json.output ?? $json.text ?? $json.response ?? $json;\n\nlet invoice;\n\n// ============================================\n// 2. PARSE QWEN RESPONSE\n// ============================================\n\nif (typeof raw === 'string') {\n  let cleaned = raw.trim();\n\n  // Remove Markdown code fences\n  cleaned = cleaned\n    .replace(/^```(?:json)?\\s*/i, '')\n    .replace(/\\s*```$/i, '')\n    .trim();\n\n  // Extract JSON object\n  const start = cleaned.indexOf('{');\n  const end = cleaned.lastIndexOf('}');\n\n  if (start === -1 || end === -1 || end < start) {\n    throw new Error(\n      'No valid JSON object found in Qwen response: ' + cleaned\n    );\n  }\n\n  let jsonString = cleaned.substring(start, end + 1);\n\n  // --------------------------------------------\n  // CLEAN COMMON QWEN JSON FORMATTING ISSUES\n  // --------------------------------------------\n\n  // Remove trailing commas before closing arrays/objects\n  jsonString = jsonString.replace(/,\\s*([}\\]])/g, '$1');\n\n  // Normalize smart quotation marks\n  jsonString = jsonString\n    .replace(/[\\u201C\\u201D]/g, '\"')\n    .replace(/[\\u2018\\u2019]/g, \"'\");\n\n  try {\n    invoice = JSON.parse(jsonString);\n\n  } catch (error) {\n\n    // ------------------------------------------\n    // PROVIDE EXACT ERROR LOCATION\n    // ------------------------------------------\n\n    const positionMatch = error.message.match(/position\\s+(\\d+)/i);\n\n    let errorDetails = '';\n\n    if (positionMatch) {\n      const position = Number(positionMatch[1]);\n\n      const line = jsonString.substring(0, position).split('\\n').length;\n\n      const column = position -\n        jsonString.lastIndexOf('\\n', position - 1);\n\n      const context = jsonString.substring(\n        Math.max(0, position - 100),\n        Math.min(jsonString.length, position + 100)\n      );\n\n      errorDetails =\n        '\\nLine: ' + line +\n        '\\nColumn: ' + column +\n        '\\nPosition: ' + position +\n        '\\nContext: ' + context;\n    }\n\n    throw new Error(\n      'Failed to parse Qwen JSON: ' + error.message +\n      errorDetails +\n      '\\nExtracted content: ' + jsonString\n    );\n  }\n\n} else {\n  invoice = raw;\n}\n\n// ============================================\n// 3. VALIDATE INVOICE OBJECT\n// ============================================\n\nif (\n  !invoice ||\n  typeof invoice !== 'object' ||\n  Array.isArray(invoice)\n) {\n  throw new Error(\n    'Qwen response must contain a valid JSON object.'\n  );\n}\n\n// ============================================\n// 4. NORMALIZE VAT AND TAX\n// ============================================\n\nconst taxCandidates = [\n  invoice.tax,\n  invoice.vat,\n  invoice.VAT\n];\n\nconst extractedTax = taxCandidates.find(value =>\n  value !== undefined &&\n  value !== null &&\n  !(typeof value === 'string' && value.trim() === '')\n);\n\ninvoice.tax = extractedTax ?? null;\n\n// Remove duplicate VAT fields\ndelete invoice.vat;\ndelete invoice.VAT;\n\n// ============================================\n// 5. DEFINE PLACEHOLDERS\n// ============================================\n\nconst placeholders = [\n  'mm-dd-yy',\n  'dd-mm-yy',\n  'yyyy-mm-dd',\n  'n/a',\n  'not available',\n  'unknown',\n  'xxxxx'\n];\n\n// ============================================\n// 6. NORMALIZE EMPTY AND PLACEHOLDER VALUES\n// ============================================\n\nfor (const field of ['due_date', 'discount']) {\n  const value = invoice[field];\n\n  if (\n    value === null ||\n    value === undefined ||\n    (\n      typeof value === 'string' &&\n      (\n        value.trim() === '' ||\n        placeholders.includes(value.trim().toLowerCase()) ||\n        value.trim().startsWith('[')\n      )\n    )\n  ) {\n    invoice[field] = null;\n  }\n}\n\n// ============================================\n// 7. CHECK DOCUMENT TYPE\n// ============================================\n\nconst isInvoice =\n  typeof invoice.document_type === 'string' &&\n  invoice.document_type.trim().toLowerCase() === 'invoice';\n\n// ============================================\n// 8. DEFINE REQUIRED FIELDS FOR MVP\n// ============================================\n\nconst requiredFields = [\n  'invoice_number',\n  'invoice_date',\n  'due_date',\n  'vendor_name',\n  'total',\n  'discount',\n  'tax'\n];\n\n// ============================================\n// 9. FIND MISSING REQUIRED FIELDS\n// ============================================\n\nconst missingFields = requiredFields.filter(field => {\n  const value = invoice[field];\n\n  return (\n    value === null ||\n    value === undefined ||\n    (typeof value === 'string' && value.trim() === '')\n  );\n});\n\n// ============================================\n// 10. GET QWEN AI MISSING FIELDS\n// ============================================\n\nconst aiMissingFields = Array.isArray(invoice.missing_fields)\n  ? invoice.missing_fields\n  : [];\n\n// ============================================\n// 11. RECONCILE QWEN MISSING FIELDS\n// WITH ACTUAL INVOICE VALUES\n// ============================================\n\nconst validAiMissingFields = aiMissingFields.filter(field => {\n\n  // Only accept string field names\n  if (typeof field !== 'string') {\n    return false;\n  }\n\n  const normalizedField = field.trim().toLowerCase();\n\n  // Ignore fields not required by the MVP\n  if (!requiredFields.includes(normalizedField)) {\n    return false;\n  }\n\n  const value = invoice[normalizedField];\n\n  // Keep the field only if its actual value is empty\n  return (\n    value === null ||\n    value === undefined ||\n    (typeof value === 'string' && value.trim() === '')\n  );\n});\n\n// ============================================\n// 12. COMBINE MISSING FIELDS\n// WITHOUT DUPLICATES\n// ============================================\n\nconst allMissingFields = [...new Set([\n  ...missingFields,\n  ...validAiMissingFields\n])];\n\n// ============================================\n// 13. REMOVE TAX FROM MISSING FIELDS\n// IF TAX WAS SUCCESSFULLY EXTRACTED\n// ============================================\n\nif (invoice.tax !== null) {\n  const taxIndex = allMissingFields.indexOf('tax');\n\n  if (taxIndex !== -1) {\n    allMissingFields.splice(taxIndex, 1);\n  }\n}\n\n// ============================================\n// 14. DETERMINE INVOICE COMPLETENESS\n// ============================================\n\nconst isComplete =\n  isInvoice && allMissingFields.length === 0;\n\n// ============================================\n// 15. UPDATE INVOICE OBJECT\n// ============================================\n\ninvoice.missing_fields = allMissingFields;\ninvoice.is_complete = isComplete;\n\n// ============================================\n// 16. DETERMINE VALIDATION STATUS\n// ============================================\n\nconst validationStatus = !isInvoice\n  ? 'not_invoice'\n  : isComplete\n    ? 'complete'\n    : 'incomplete';\n\n// ============================================\n// 17. RETURN FINAL RESULT TO N8N\n// ============================================\n\nreturn {\n  json: {\n    invoice,\n    isInvoice,\n    isComplete,\n    missingFields: allMissingFields,\n    validationStatus\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -10208,
+        -2256
+      ],
+      "id": "2ec4ea81-c650-4df6-a6c1-2b5eec0406c2",
+      "name": "Validate Invoice"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=The invoice is appeared to be invalid.\nPlease upload a valid invoice in IMG or PNG format.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -9808,
+        -2096
+      ],
+      "id": "937b18e2-09e5-4ad9-81d5-f357ea1748b2",
+      "name": "Invalid Document Text",
+      "webhookId": "0acd510c-44da-4b5e-b113-b6135fbef435",
+      "credentials": {
+        "telegramApi": {
+          "id": "rH14uZlSXg7hucX5",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=\n{{\n  '⚠️ MISSING INVOICE INFORMATION\\n\\n' +\n  'Some invoice fields could not be extracted:\\n\\n' +\n  (\n    $json.missing_fields ??\n    $json.invoice_data?.missing_fields ??\n    $json.missingFields ??\n    []\n  ).map((field, index) =>\n    `${index + 1}. ${String(field).replace(/_/g, ' ')}`\n  ).join('\\n') +\n  '\\n\\nHow would you like to continue?'\n}}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✏️ Update Information",
+                    "additionalFields": {
+                      "callback_data": "={{ 'provide_missing|' + $json.id }}"
+                    }
+                  },
+                  {
+                    "text": "▶️ Proceed Anyway",
+                    "additionalFields": {
+                      "callback_data": "proceed_anyway"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -9504,
+        -2304
+      ],
+      "id": "7392d143-9714-49b5-9274-73309e5a340f",
+      "name": "Request Missing Information",
+      "webhookId": "553c27ad-8f9a-4429-bab4-cef404c59381",
+      "credentials": {
+        "telegramApi": {
+          "id": "rH14uZlSXg7hucX5",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{\n  'Invoice Number: ' + $('Validate Invoice').first().json.invoice.invoice_number + '\\n' +\n  'Invoice Date: ' + $('Validate Invoice').first().json.invoice.invoice_date + '\\n' +\n  'Vendor: ' + $('Validate Invoice').first().json.invoice.vendor_name + '\\n' +\n  'Total: ' + $('Validate Invoice').first().json.invoice.currency + ' ' +\n  $('Validate Invoice').first().json.invoice.total\n}}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Approve Invoice",
+                    "additionalFields": {
+                      "callback_data": "={{ 'approve|' + $('Store Valid Invoices').first().json.id }}"
+                    }
+                  },
+                  {
+                    "text": "✏️ Correct Details",
+                    "additionalFields": {
+                      "callback_data": "correct_details"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -9296,
+        -2480
+      ],
+      "id": "c4707b03-c045-431e-9d71-d49e1db4c593",
+      "name": "Send Invoice Summary",
+      "webhookId": "f30cf759-5cef-471d-8ded-4e5776b902d7",
+      "credentials": {
+        "telegramApi": {
+          "id": "rH14uZlSXg7hucX5",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### Classify Invoice File Type\n",
+        "height": 272,
+        "width": 224,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -11280,
+        -2400
+      ],
+      "typeVersion": 1,
+      "id": "db916667-1e3b-41f8-aa9e-8a4fdded2452",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Extract Invoice Data in JSON Format",
+        "height": 624,
+        "width": 688,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -10976,
+        -2544
+      ],
+      "typeVersion": 1,
+      "id": "c760c5f6-8896-4a13-b0da-b73a7f1ea33a",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Data Validation & User Verification",
+        "height": 624,
+        "width": 1168,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -10256,
+        -2544
+      ],
+      "typeVersion": 1,
+      "id": "9a9e0c5e-054c-42bd-84fc-557502844054",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "proceed_anyway",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "b1f72935-f1da-4724-b8e4-f91842ea1aa2"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Proceed"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "6a6ecf23-efc7-405d-8e0d-f4788f10b254",
+                    "leftValue": "={{ $json.callback_query.data.split('|')[0] }}",
+                    "rightValue": "provide_missing",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Update Missing Information"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "a5c947b2-9206-4f3a-8657-5b9baea8e516",
+                    "leftValue": "={{ $json.callback_query.data.split('|')[0] }}",
+                    "rightValue": "approve",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Approve Invoice"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "77bc9758-1e5f-40de-87c6-b499fbe41238",
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "update_details",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Update Details"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        -10880,
+        -1728
+      ],
+      "id": "bc52162d-d816-43b5-8dcb-9a8b599f27a3",
+      "name": "Route Inline Keyboard Actions"
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $json.callback_query.id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -10608,
+        -1888
+      ],
+      "id": "4578eb0d-61d3-4a03-9588-0b1f43701956",
+      "name": "Acknowledge Proceed",
+      "webhookId": "9c53648f-7757-4dce-afdb-da8020dd6dbc",
+      "credentials": {
+        "telegramApi": {
+          "id": "rH14uZlSXg7hucX5",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $json.callback_query.id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -10608,
+        -1728
+      ],
+      "id": "8214821b-19f4-4f36-b540-cb75a854c485",
+      "name": "Acknowledge Missing Info",
+      "webhookId": "9c53648f-7757-4dce-afdb-da8020dd6dbc",
+      "credentials": {
+        "telegramApi": {
+          "id": "rH14uZlSXg7hucX5",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {
+          "download": true
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -11200,
+        -1504
+      ],
+      "id": "69632cdb-f8af-4140-adab-560cf404bb77",
+      "name": "Acknowledge Trigger",
+      "webhookId": "2dc8a784-7c9d-4fb3-8d5d-c9ac8dfe9e0b",
+      "credentials": {
+        "telegramApi": {
+          "id": "rH14uZlSXg7hucX5",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $json.callback_query.id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -10608,
+        -1552
+      ],
+      "id": "0c9a4b83-25cd-4d85-9151-8cd740ca7f45",
+      "name": "Acknowledge Approve",
+      "webhookId": "9c53648f-7757-4dce-afdb-da8020dd6dbc",
+      "credentials": {
+        "telegramApi": {
+          "id": "rH14uZlSXg7hucX5",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $json.callback_query.id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -10608,
+        -1392
+      ],
+      "id": "0b430f68-a9b0-43e8-9a3c-42b6c9b4fc54",
+      "name": "Acknowledge Correct Details",
+      "webhookId": "9c53648f-7757-4dce-afdb-da8020dd6dbc",
+      "credentials": {
+        "telegramApi": {
+          "id": "rH14uZlSXg7hucX5",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Inline Acknowledgement Actions\n",
+        "height": 872,
+        "width": 2068,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -11264,
+        -1904
+      ],
+      "typeVersion": 1,
+      "id": "2969d2a3-bb8f-4118-8ec8-67e1863a20e7",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "11fdb0ef-8b16-435d-8382-43698d23f7fc",
+              "leftValue": "={{ $json.isInvoice }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -10064,
+        -2256
+      ],
+      "id": "21d5cc80-fefe-48ae-9a1a-ed37c08415bd",
+      "name": "isInvoice"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "d1e60a2d-3abc-4334-b1f9-6a2b635a6367",
+              "leftValue": "={{ $('Validate Invoice').first().json.isComplete }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -9808,
+        -2416
+      ],
+      "id": "80249c16-de05-4f29-8303-f9c2220d4f28",
+      "name": "isComplete"
+    },
+    {
+      "parameters": {
+        "tableId": "invoice_records",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "telegram_user_id",
+              "fieldValue": "={{ $('Telegram Trigger').item.json.message.from.id }}"
+            },
+            {
+              "fieldId": "chat_id",
+              "fieldValue": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+            },
+            {
+              "fieldId": "invoice_data",
+              "fieldValue": "={{ $json.invoice }}"
+            },
+            {
+              "fieldId": "missing_fields",
+              "fieldValue": "={{ $json.missingFields }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.isComplete ? 'awaiting_verification' : 'awaiting_missing_info' }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -9504,
+        -2480
+      ],
+      "id": "c7df841d-d236-45d7-9cb5-a788fe584706",
+      "name": "Store Valid Invoices",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4dWTmAz6th8z1cct",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "invoice_records",
+        "limit": 1,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Route Inline Keyboard Actions').first().json.callback_query.data.split('|')[1] }}"
+            },
+            {
+              "keyName": "telegram_user_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Route Inline Keyboard Actions').first().json.callback_query.from.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -10208,
+        -1712
+      ],
+      "id": "403e9d3b-6203-43db-b4e1-a6b72b4d6e56",
+      "name": "Retrieve info for correction",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4dWTmAz6th8z1cct",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Route Inline Keyboard Actions').item.json.callback_query.message.chat.id }}",
+        "text": "={{\n  'Please provide the following information:\\n\\n' +\n  $('Retrieve info for correction').first().json.missing_fields\n    .map(field => field.replace(/_/g, ' ').replace(/\\b\\w/g, c => c.toUpperCase()))\n    .join('\\n') +\n  '\\n\\nExample:\\nDue Date: 2024-08-05\\nDiscount: 12'\n}}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": []
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -9600,
+        -1712
+      ],
+      "id": "4f968754-ab05-496d-89c2-00f3009b06a4",
+      "name": "Request missing fields",
+      "webhookId": "f30cf759-5cef-471d-8ded-4e5776b902d7",
+      "credentials": {
+        "telegramApi": {
+          "id": "rH14uZlSXg7hucX5",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message?.text && !$json.callback_query ? 'text' : 'other' }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ad416198-7caf-407f-bd57-0f4cb906fbbe"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Correction Reply"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        -10608,
+        -1200
+      ],
+      "id": "26b00313-48ff-4b44-a900-9d01fadd2b68",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "tableId": "invoice_sessions",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "telegram_user_id",
+              "fieldValue": "={{ $('Route Inline Keyboard Actions').first().json.callback_query.from.id }}"
+            },
+            {
+              "fieldId": "chat_id",
+              "fieldValue": "={{ $('Route Inline Keyboard Actions').first().json.callback_query.message.chat.id }}"
+            },
+            {
+              "fieldId": "invoice_id",
+              "fieldValue": "={{ $('Retrieve info for correction').first().json.id }}"
+            },
+            {
+              "fieldId": "current_missing_field",
+              "fieldValue": "={{ $('Retrieve info for correction').first().json.missing_fields }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -9808,
+        -1712
+      ],
+      "id": "923ddbf8-db63-4601-86aa-4a60033868a7",
+      "name": "Store Backlog (Create)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4dWTmAz6th8z1cct",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "invoice_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "telegram_user_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Route Inline Keyboard Actions').item.json.callback_query.from.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -10000,
+        -1712
+      ],
+      "id": "2dfeddf1-a75d-4bb4-b991-2a074e0deabb",
+      "name": "Backlog v1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4dWTmAz6th8z1cct",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "invoice_sessions",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "telegram_user_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.message.from.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -10400,
+        -1200
+      ],
+      "id": "63cc02e2-ba99-4b22-a513-73f2864eb0b1",
+      "name": "Get Active Correction Session",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4dWTmAz6th8z1cct",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "invoice_records",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get Active Correction Session').first().json.invoice_id }}"
+            },
+            {
+              "keyName": "telegram_user_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Acknowledge Trigger').first().json.message.from.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -10176,
+        -1200
+      ],
+      "id": "ab8a24c0-e67b-4c10-b942-00dc8ca9bdc7",
+      "name": "Get many rows",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4dWTmAz6th8z1cct",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "invoice_records",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.invoice_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "invoice_data",
+              "fieldValue": "={{ $json.invoice_data }}"
+            },
+            {
+              "fieldId": "missing_fields",
+              "fieldValue": "={{ $json.missing_fields }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.correction_complete ? 'awaiting_verification' : 'awaiting_missing_info' }}"
+            },
+            {
+              "fieldId": "updated_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -9728,
+        -1200
+      ],
+      "id": "d55b0044-462f-444b-8651-9ef6092656c3",
+      "name": "Update Invoice",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4dWTmAz6th8z1cct",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Acknowledge Trigger').first().json.message.chat.id }}",
+        "text": "=✅ INVOICE DETAILS UPDATED\n\nInvoice Number: XXXXX\nVendor: Pay B.V.\nInvoice Date: MM-DD-YY\nDue Date: 2024-08-05\n\nSubtotal: €372.00\nTax: €78.12\nDiscount: €12.00\nTotal: €450.12\n\nAll previously missing information has been updated.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -9440,
+        -1200
+      ],
+      "id": "99a983e2-8099-4e4d-82dd-e5a0cfb513c0",
+      "name": "Send a text message",
+      "webhookId": "f9eb671e-d5ce-4026-b62b-7722a6bb10c6",
+      "credentials": {
+        "telegramApi": {
+          "id": "rH14uZlSXg7hucX5",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "\nconst invoice = $json.invoice_data;\n\nconst message = $('Acknowledge Trigger').first().json.message.text;\n\nconst missingFields = $json.missing_fields || [];\n\nconst updates = {};\n\nfor (const field of missingFields) {\n  const regex = new RegExp(\n    `${field.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}\\\\s*:\\\\s*(-?\\\\d+(?:\\\\.\\\\d+)?)`,\n    'i'\n  );\n\n  const match = message.match(regex);\n\n  if (match) {\n    updates[field] = Number(match[1]);\n  }\n}\n\nconst unprovidedFields = missingFields.filter(\n  field => updates[field] === undefined\n);\n\nreturn {\n  json: {\n    invoice_id: $json.id,\n    invoice_data: {\n      ...invoice,\n      ...updates,\n      missing_fields: unprovidedFields,\n      is_complete: unprovidedFields.length === 0\n    },\n    missing_fields: unprovidedFields,\n    correction_complete: unprovidedFields.length === 0\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -9952,
+        -1200
+      ],
+      "id": "88d21005-e74d-4092-ac2c-2242f6515c1e",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "18zHNt0MwXGI8Rse7qCBYJdEBBAJteUkY6fY0aDLz5ZE",
+          "mode": "list",
+          "cachedResultName": "Business Invoice Ledger",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/18zHNt0MwXGI8Rse7qCBYJdEBBAJteUkY6fY0aDLz5ZE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/18zHNt0MwXGI8Rse7qCBYJdEBBAJteUkY6fY0aDLz5ZE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email Address": "={{ $json.invoice_data.email_address }}",
+            "Invoice Number": "={{ $json.invoice_data.invoice_number }}",
+            "Invoice ID": "={{ $json.id }}",
+            "Vendor Name": "={{ $json.invoice_data.vendor_name }}",
+            "Due Date": "={{ $json.invoice_data.due_date }}",
+            "Subtotal": "={{ $json.invoice_data.subtotal }}",
+            "Discount": "={{ $json.invoice_data.discount }}",
+            "Total": "={{ $json.invoice_data.total }}",
+            "Approved By": "={{ $json.telegram_user_id }}",
+            "Currency": "={{ $json.invoice_data.currency }}",
+            "Tax": "={{ $json.invoice_data.tax }}",
+            "Invoice Date": "={{ $json.invoice_data.invoice_date }}",
+            "Approved At": "={{ $json.approved_at }}"
+          },
+          "matchingColumns": [
+            "Invoice ID"
+          ],
+          "schema": [
+            {
+              "id": "Invoice ID",
+              "displayName": "Invoice ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Invoice Number",
+              "displayName": "Invoice Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Vendor Name",
+              "displayName": "Vendor Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Address",
+              "displayName": "Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Invoice Date",
+              "displayName": "Invoice Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Due Date",
+              "displayName": "Due Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Currency",
+              "displayName": "Currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Subtotal",
+              "displayName": "Subtotal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tax",
+              "displayName": "Tax",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Discount",
+              "displayName": "Discount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Approved By",
+              "displayName": "Approved By",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Approved At",
+              "displayName": "Approved At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -9088,
+        -1664
+      ],
+      "id": "3b20d78c-acfa-4a42-80fd-15b0faf3648c",
+      "name": "Update Business Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bhfm19MU7T7JI7LI",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "invoice_records",
+        "limit": 1,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Route Inline Keyboard Actions').first().json.callback_query.data.split('|')[1] }}"
+            },
+            {
+              "keyName": "telegram_user_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Route Inline Keyboard Actions').first().json.callback_query.from.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -10272,
+        -1472
+      ],
+      "id": "6ea86750-7213-46c6-a4d0-751a17b5798d",
+      "name": "Get Invoice Before Approval",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4dWTmAz6th8z1cct",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "invoice_records",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get Invoice Before Approval').first().json.id }}"
+            },
+            {
+              "keyName": "telegram_user_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Route Inline Keyboard Actions').first().json.callback_query.from.id }}"
+            },
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "awaiting_verification"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "approved"
+            },
+            {
+              "fieldId": "approved_by",
+              "fieldValue": "={{ $('Route Inline Keyboard Actions').first().json.callback_query.from.id }}"
+            },
+            {
+              "fieldId": "approved_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "updated_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -9664,
+        -1488
+      ],
+      "id": "037def93-d504-4d49-a86f-23ae26af3959",
+      "name": "Approve Invoice",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4dWTmAz6th8z1cct",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "8d39bdf2-42a2-49b3-b6fe-c13136c7552e",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "={{ $json.status }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -9984,
+        -1472
+      ],
+      "id": "324382a2-b1c9-4712-b098-e50220593eab",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "model": "gemma4:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -10704,
+        -2320
+      ],
+      "id": "eddfbf4b-91c2-477a-b801-bc7278d74c71",
+      "name": "gemma 4",
+      "credentials": {
+        "ollamaApi": {
+          "id": "6hrSXbXo9nOFRhfJ",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "qwen3.8:27b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -10576,
+        -2048
+      ],
+      "id": "d403709f-99e8-431a-95e6-4b06649b2dff",
+      "name": "qwen 3.8",
+      "credentials": {
+        "ollamaApi": {
+          "id": "6hrSXbXo9nOFRhfJ",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "={{ $('Telegram Trigger').item.json.message.document.file_name }}",
+        "name": "=Invoice_{{ $json.invoice.vendor_name }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1Vm5Xm-wd_Y8s_Rg01e0sa-XeIq_qTOFa",
+          "mode": "list",
+          "cachedResultName": "Invoice Agent",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1Vm5Xm-wd_Y8s_Rg01e0sa-XeIq_qTOFa"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -9808,
+        -2272
+      ],
+      "id": "eba096b9-a961-4900-8667-36e7c2f02fd4",
+      "name": "Upload Invoice",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "8m9KAIRcWbrnPWvF",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get IMG File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get PDF File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Extraction Agent": {
+      "main": [
+        [
+          {
+            "node": "Validate Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get IMG File": {
+      "main": [
+        [
+          {
+            "node": "Image Extraction Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get PDF File": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF Extraction Agent": {
+      "main": [
+        [
+          {
+            "node": "Validate Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "PDF Extraction Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Invoice": {
+      "main": [
+        [
+          {
+            "node": "isInvoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Missing Information": {
+      "main": [
+        []
+      ]
+    },
+    "Route Inline Keyboard Actions": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge Proceed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Acknowledge Missing Info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Retrieve info for correction",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Acknowledge Approve",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Acknowledge Correct Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acknowledge Trigger": {
+      "main": [
+        [
+          {
+            "node": "Route Inline Keyboard Actions",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "isInvoice": {
+      "main": [
+        [
+          {
+            "node": "Upload Invoice",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "isComplete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Document Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "isComplete": {
+      "main": [
+        [
+          {
+            "node": "Store Valid Invoices",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Request Missing Information",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Valid Invoices": {
+      "main": [
+        [
+          {
+            "node": "Send Invoice Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve info for correction": {
+      "main": [
+        [
+          {
+            "node": "Backlog v1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Get Active Correction Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request missing fields": {
+      "main": [
+        []
+      ]
+    },
+    "Store Backlog (Create)": {
+      "main": [
+        [
+          {
+            "node": "Request missing fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backlog v1": {
+      "main": [
+        [
+          {
+            "node": "Store Backlog (Create)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Correction Session": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Invoice": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update Business Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Update Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acknowledge Proceed": {
+      "main": [
+        []
+      ]
+    },
+    "Update Business Sheet": {
+      "main": [
+        []
+      ]
+    },
+    "Acknowledge Approve": {
+      "main": [
+        [
+          {
+            "node": "Get Invoice Before Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Invoice Before Approval": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approve Invoice": {
+      "main": [
+        [
+          {
+            "node": "Update Business Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Approve Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "gemma 4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Image Extraction Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "qwen 3.8": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "PDF Extraction Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "560d4c53-4926-4491-b17c-0104f120aee2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a94d2262ae3024ca23c179fb61f98fbd7705a22d921531c57e2dc3dfa2d32ea2"
+  },
+  "nodeGroups": [],
+  "id": "BiVE4qq2ci5NYMsY",
+  "tags": []
+}
