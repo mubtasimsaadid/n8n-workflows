@@ -191,9 +191,9 @@ The incoming document is passed to the appropriate processing branch.
 
 ### Stage 2: Document Processing & AI Extraction
 
-**Core Component: Qwen AI**
+**Core Component: Gemma & Qwen AI**
 
-The submitted invoice is processed and passed to Qwen AI for information extraction.
+The submitted invoice is processed and passed to Gemma & Qwen AI based on the document type for information extraction.
 
 The AI identifies relevant invoice details and generates structured output.
 
