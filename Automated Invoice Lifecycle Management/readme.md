@@ -1,4 +1,4 @@
-# 🤖 InvoiceFlow — Invoice Processing & Management System
+# InvoiceFlow — Invoice Processing & Management System
 
 An intelligent, AI-powered invoice management system built with **n8n, Gemma, Qwen AI, Supabase, Telegram, and Google Sheets** that automates the invoice processing lifecycle — from document submission and data extraction to information validation, correction, human approval, and business record management.
 
@@ -420,21 +420,12 @@ This conditional processing approach prevents every invoice from following the s
 |---|---|
 | [n8n](https://n8n.io/) | Workflow automation and orchestration |
 | [Telegram Bot API](https://core.telegram.org/bots/api) | Invoice submission and conversational interaction |
-| [Qwen AI](https://qwen.ai/) | AI-powered invoice understanding and extraction |
-| JavaScript | JSON parsing, validation, and data transformation |
+| [Qwen AI](https://qwen.ai/) | PDF-based invoice text and structured data extraction |
+| [Gemma](https://ai.google.dev/gemma) | Image-based invoice text extraction and visual document understanding |
+| JavaScript | JSON parsing, data validation, and transformation |
 | [Supabase](https://supabase.com/) | Primary database and invoice record management |
 | [Google Sheets](https://workspace.google.com/products/sheets/) | Business-facing invoice ledger |
 
-### Why This Technology Stack?
-
-- **n8n:** Provides flexible, visual workflow orchestration.
-- **Qwen AI:** Handles unstructured invoice understanding and information extraction.
-- **Telegram:** Provides a simple conversational interface.
-- **JavaScript:** Enables custom validation and data-processing logic.
-- **Supabase:** Provides persistent and structured invoice storage.
-- **Google Sheets:** Makes approved invoice information accessible to business users.
-
----
 
 ## 🗄️ Database & Data Management
 
@@ -605,7 +596,6 @@ While InvoiceFlow automates several invoice management activities, certain consi
 4. **Concurrent Processing:** Multiple employees submitting or correcting invoices simultaneously require proper session and record management.
 5. **Duplicate Invoices:** Production deployment should include duplicate detection using invoice identifiers and vendor information.
 6. **Error Handling:** API failures, database errors, and interrupted conversations should be handled through appropriate recovery mechanisms.
-7. **Financial Security:** Access to invoice information and approval permissions should be restricted to authorized users.
 
 ---
 
@@ -628,31 +618,20 @@ Potential improvements to extend the system into a more comprehensive invoice ma
 
 ---
 
-## 🎯 Project Objective
-
-The ultimate objective of InvoiceFlow is to demonstrate how AI agents and workflow automation can solve real-world administrative problems.
-
-Rather than using AI simply to extract information from documents, this project demonstrates how AI can participate in a complete business process involving document understanding, validation, conversational interaction, decision routing, database management, and human approval.
-
-It provides a practical foundation for building intelligent business automation solutions.
-
 ---
 
 ## 👨‍💻 Author
 
 **Mubtasim Saadid Ahmed**
 
-Computer Science Graduate | Data Science | AI Engineering | Workflow Automation
+Data Science | AI Engineering | Workflow Automation
 
 Interested in building intelligent systems that combine AI, data, and automation to solve practical business problems.
 
-- LinkedIn: [Add your LinkedIn profile]
-- GitHub: [Add your GitHub profile]
-
+- LinkedIn: www.linkedin.com/in/mubtasimsaadid
+- Gmail: mubtasim.saadid02@gmail.com
 ---
 
 ## ⭐ Support
 
 If you find this project interesting or useful, consider giving the repository a ⭐ on GitHub.
-
-**Let's build smarter business operations with AI and automation!**
